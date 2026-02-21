@@ -466,11 +466,17 @@ export class SessionManager {
   private async generateCompactionSummary(transcript: string, session: Session): Promise<string> {
     try {
       const OpenAI = (await import('openai')).default;
-      const { env } = await import('../config/env.js');
+      const { getLLMBaseURL, getLLMApiKey } = await import('../config/env.js');
+
+      const baseURL = getLLMBaseURL();
+      const apiKey = getLLMApiKey();
 
       const openai = new OpenAI({
-        apiKey: env.OPENROUTER_API_KEY,
-        baseURL: 'https://openrouter.ai/api/v1',
+        // OpenAI SDK requires non-empty apiKey; use placeholder for local Ollama
+        apiKey: apiKey || 'ollama-local',
+        baseURL,
+        // Skip auth header when using local Ollama without API key
+        ...(apiKey ? {} : { defaultHeaders: {} }),
       });
 
       const workspace = session.currentProject?.name ?? 'unknown';
@@ -594,13 +600,19 @@ Keep it under ${pipeline.compactionMaxTokens} tokens.${chainContext}`
   private async generateEmbedding(text: string): Promise<number[] | null> {
     try {
       const OpenAI = (await import('openai')).default;
-      const { env } = await import('../config/env.js');
+      const { getLLMBaseURL, getLLMApiKey, isLocalOllama } = await import('../config/env.js');
 
-      if (!env.OPENROUTER_API_KEY) return null;
+      // Skip embeddings if using local Ollama (may not support embeddings API)
+      if (isLocalOllama()) return null;
+
+      const baseURL = getLLMBaseURL();
+      const apiKey = getLLMApiKey();
+
+      if (!apiKey) return null;
 
       const openai = new OpenAI({
-        apiKey: env.OPENROUTER_API_KEY,
-        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey,
+        baseURL,
       });
 
       const response = await openai.embeddings.create({

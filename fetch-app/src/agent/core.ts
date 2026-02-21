@@ -36,7 +36,7 @@ import { getSessionManager } from '../session/manager.js';
 import { generateRepoMap } from '../workspace/repo-map.js';
 import { getIdentityManager } from '../identity/manager.js';
 import { getSkillManager } from '../skills/manager.js';
-import { env } from '../config/env.js';
+import { env, getLLMBaseURL, getLLMModel, getLLMApiKey } from '../config/env.js';
 import { pipeline } from '../config/pipeline.js';
 
 // =============================================================================
@@ -89,7 +89,7 @@ export interface AgentProcessOptions {
 // CONSTANTS
 // =============================================================================
 
-const MODEL = env.AGENT_MODEL;
+const MODEL = getLLMModel('agent');
 const MAX_TOOL_CALLS = pipeline.maxToolCalls;
 const MAX_CONSECUTIVE_ERRORS = pipeline.circuitBreakerThreshold;
 const ERROR_BACKOFF_MS = pipeline.circuitBreakerBackoff;
@@ -324,13 +324,15 @@ let openaiClient: OpenAI | null = null;
 
 function getOpenAI(): OpenAI {
   if (!openaiClient) {
-    const apiKey = env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENROUTER_API_KEY not set');
-    }
+    const baseURL = getLLMBaseURL();
+    const apiKey = getLLMApiKey();
+
     openaiClient = new OpenAI({
-      apiKey,
-      baseURL: 'https://openrouter.ai/api/v1',
+      // OpenAI SDK requires non-empty apiKey; use placeholder for local Ollama
+      apiKey: apiKey || 'ollama-local',
+      baseURL,
+      // Skip auth header when using local Ollama without API key
+      ...(apiKey ? {} : { defaultHeaders: {} }),
     });
   }
   return openaiClient;

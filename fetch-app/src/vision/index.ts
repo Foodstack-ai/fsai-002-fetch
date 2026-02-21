@@ -8,26 +8,25 @@
 
 import OpenAI from 'openai';
 import { logger } from '../utils/logger.js';
-import { env } from '../config/env.js';
+import { getLLMBaseURL, getLLMModel, getLLMApiKey } from '../config/env.js';
 
 let openaiClient: OpenAI | null = null;
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** Returns a cached OpenAI client configured for OpenRouter vision requests. */
+/** Returns a cached OpenAI client configured for vision requests. */
 function getClient(): OpenAI {
   if (openaiClient) return openaiClient;
 
-  // We strictly use OpenRouter for all AI services
-  const apiKey = env.OPENROUTER_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error('Missing OPENROUTER_API_KEY for vision analysis');
-  }
+  const baseURL = getLLMBaseURL();
+  const apiKey = getLLMApiKey();
 
   openaiClient = new OpenAI({
-    apiKey,
-    baseURL: 'https://openrouter.ai/api/v1',
+    // OpenAI SDK requires non-empty apiKey; use placeholder for local Ollama
+    apiKey: apiKey || 'ollama-local',
+    baseURL,
+    // Skip auth header when using local Ollama without API key
+    ...(apiKey ? {} : { defaultHeaders: {} }),
   });
 
   return openaiClient;
@@ -57,7 +56,7 @@ Instructions:
 
     // Standard OpenAI Vision format
     const response = await client.chat.completions.create({
-      model: env.VISION_MODEL,
+      model: getLLMModel('vision'),
       messages: [
         {
           role: 'user',
@@ -90,7 +89,8 @@ Instructions:
 
 /** Returns `true` when vision requests can be made. */
 export function isVisionAvailable(): boolean {
-  return !!env.OPENROUTER_API_KEY;
+  // Vision is available if we have any LLM configured (local or remote)
+  return true;
 }
 
 function validateImageInput(base64Data: string, mimeType: string): void {

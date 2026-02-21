@@ -17,13 +17,20 @@ import { z } from 'zod';
 
 const EnvSchema = z.object({
   // Required
-  OPENROUTER_API_KEY: z.string().min(1, 'OPENROUTER_API_KEY is required'),
   OWNER_PHONE_NUMBER: z.string().min(1, 'OWNER_PHONE_NUMBER is required'),
 
-  // Models
-  AGENT_MODEL: z.string().default('openai/gpt-4o-mini'),
-  SUMMARY_MODEL: z.string().default('openai/gpt-4o-mini'),
-  VISION_MODEL: z.string().default('openai/gpt-4o-mini'),
+  // Unified LLM Provider Configuration
+  LLM_BASE_URL: z.string().default('http://host.docker.internal:11434/v1'),
+  LLM_MODEL: z.string().default('glm-4.7-flash'),
+  LLM_API_KEY: z.string().optional(), // Optional - no auth header when empty
+
+  // Legacy OpenRouter (optional, falls back to LLM_* config)
+  OPENROUTER_API_KEY: z.string().optional(),
+
+  // Models (defaults now use LLM_MODEL as base)
+  AGENT_MODEL: z.string().optional(),
+  SUMMARY_MODEL: z.string().optional(),
+  VISION_MODEL: z.string().optional(),
   WHISPER_MODEL: z.string().default('/app/models/ggml-tiny.bin'),
 
   // Paths
@@ -72,9 +79,8 @@ const EnvSchema = z.object({
 // ============================================================================
 
 const DEFAULTS: Partial<Record<string, string>> = {
-  AGENT_MODEL: 'openai/gpt-4o-mini',
-  SUMMARY_MODEL: 'openai/gpt-4o-mini',
-  VISION_MODEL: 'openai/gpt-4o-mini',
+  LLM_BASE_URL: 'http://host.docker.internal:11434/v1',
+  LLM_MODEL: 'glm-4.7-flash',
   WHISPER_MODEL: '/app/models/ggml-tiny.bin',
   WORKSPACE_ROOT: '/workspace',
   LOG_LEVEL: 'debug',
@@ -172,4 +178,58 @@ export function validateRuntimeEnvUpdates(
   }
 
   return { valid: invalid.length === 0, invalid };
+}
+
+// ============================================================================
+// LLM Configuration Helpers
+// ============================================================================
+
+/**
+ * Returns the LLM base URL from unified config or OpenRouter fallback.
+ */
+export function getLLMBaseURL(): string {
+  // Prefer unified LLM_BASE_URL
+  if (env.LLM_BASE_URL) {
+    return env.LLM_BASE_URL;
+  }
+  // Fall back to OpenRouter if OPENROUTER_API_KEY is set
+  if (env.OPENROUTER_API_KEY) {
+    return 'https://openrouter.ai/api/v1';
+  }
+  // Default to local Ollama
+  return DEFAULTS.LLM_BASE_URL!;
+}
+
+/**
+ * Returns the LLM model from unified config or specific model override.
+ */
+export function getLLMModel(modelType?: 'agent' | 'summary' | 'vision'): string {
+  // Check for specific model overrides first
+  if (modelType === 'agent' && env.AGENT_MODEL) return env.AGENT_MODEL;
+  if (modelType === 'summary' && env.SUMMARY_MODEL) return env.SUMMARY_MODEL;
+  if (modelType === 'vision' && env.VISION_MODEL) return env.VISION_MODEL;
+
+  // Use unified LLM_MODEL
+  return env.LLM_MODEL || DEFAULTS.LLM_MODEL!;
+}
+
+/**
+ * Returns the LLM API key (LLM_API_KEY or OPENROUTER_API_KEY fallback).
+ * Returns undefined if no key is configured (for local Ollama).
+ */
+export function getLLMApiKey(): string | undefined {
+  return env.LLM_API_KEY || env.OPENROUTER_API_KEY || undefined;
+}
+
+/**
+ * Returns true if using a local Ollama instance (no API key, local URL).
+ */
+export function isLocalOllama(): boolean {
+  const baseUrl = getLLMBaseURL();
+  const hasApiKey = !!getLLMApiKey();
+  return !hasApiKey && (
+    baseUrl.includes('localhost') ||
+    baseUrl.includes('127.0.0.1') ||
+    baseUrl.includes('host.docker.internal')
+  );
 }
