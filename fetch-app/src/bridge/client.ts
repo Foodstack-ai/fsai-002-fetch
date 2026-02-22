@@ -25,6 +25,7 @@ import { updateStatus, incrementMessageCount } from '../api/status.js';
 import { transcribeAudio, isTranscriptionAvailable } from '../transcription/index.js';
 import { analyzeImage, isVisionAvailable } from '../vision/index.js';
 import { composeTaskFileOpMessages, composeTaskProgressMessages, composeTaskQuestionMessages } from './progress-message.js';
+import { registerWhatsAppSender as registerHeartbeatSender, startHeartbeat, stopHeartbeat } from '../foodstack/heartbeat.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -228,7 +229,7 @@ export class Bridge {
     await initializeHandler();
 
     // Register WhatsApp sender for proactive messages (task completions, etc.)
-    registerWhatsAppSender(async (userId: string, text: string) => {
+    const whatsAppSender = async (userId: string, text: string) => {
       try {
         logger.info(`Sending proactive message to ${userId}`);
         const targetId = userId.includes('@') ? userId : `${userId}@c.us`;
@@ -240,7 +241,13 @@ export class Bridge {
       } catch (err) {
         logger.error(`Failed to send proactive WhatsApp message to ${userId}`, err);
       }
-    });
+    };
+
+    // Register with handler (for task notifications)
+    registerWhatsAppSender(whatsAppSender);
+
+    // Register with heartbeat system (for agent collaboration)
+    registerHeartbeatSender(whatsAppSender);
 
     this.setupEventHandlers();
     this.setupTaskProgressListeners();
@@ -292,6 +299,9 @@ export class Bridge {
       logger.success('WhatsApp connected and listening for commands');
       logger.info('Send a message starting with @john to interact');
       logger.divider();
+
+      // Start heartbeat system for agent collaboration
+      startHeartbeat();
     });
 
     // Authentication success
@@ -944,6 +954,7 @@ export class Bridge {
       this.reconnectTimer = null;
     }
 
+    stopHeartbeat();
     this.rateLimiter.shutdown();
     await this.securityGate.shutdown();
     await shutdown();
