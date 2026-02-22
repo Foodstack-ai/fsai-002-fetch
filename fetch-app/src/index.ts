@@ -19,6 +19,7 @@ import { getIdentityManager } from './identity/manager.js';
 import { getToolRegistry } from './tools/registry.js';
 import { getVersion } from './utils/version.js';
 import { getWorkflowManager, shutdownWorkflowManager } from './workflow/manager.js';
+import { initializeFoodstackBridge } from './foodstack/bridge.js';
 
 type ExitFn = (code: number) => void;
 
@@ -84,6 +85,11 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
       });
 
       logger.info('✅ Fetch Bridge is ready and listening!');
+
+      // Connect to FoodstackOS Living Workspace (non-blocking)
+      initializeFoodstackBridge().catch(err => {
+        logger.warn('FoodstackOS bridge initialization failed (non-fatal)', err);
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
