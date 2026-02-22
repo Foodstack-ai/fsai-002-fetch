@@ -2,7 +2,7 @@
  * @fileoverview Authorization gate for inbound WhatsApp messages.
  *
  * Enforcement rules:
- * - message must include `@fetch` trigger
+ * - message must include `@john` trigger
  * - sender must be owner or trusted whitelist member
  * - broadcast traffic is rejected
  * - unauthorized traffic is dropped without response
@@ -19,7 +19,7 @@ import { getWhitelistStore, type WhitelistStore } from './whitelist.js';
 // =============================================================================
 
 /** Trigger prefix required for non-thread traffic. */
-const FETCH_TRIGGER = '@fetch';
+const FETCH_TRIGGER = '@john';
 
 // =============================================================================
 // SECURITY GATE CLASS
@@ -88,14 +88,14 @@ export class SecurityGate {
   }
 
   /**
-   * Returns true when message starts with the `@fetch` trigger.
+   * Returns true when message starts with the `@john` trigger.
    */
   hasFetchTrigger(messageBody: string): boolean {
     return messageBody.toLowerCase().trim().startsWith(FETCH_TRIGGER);
   }
 
   /**
-   * Removes leading `@fetch` trigger from message text.
+   * Removes leading `@john` trigger from message text.
    */
   stripTrigger(messageBody: string): string {
     const body = messageBody.trim();
@@ -131,7 +131,7 @@ export class SecurityGate {
   }
 
   /**
-   * Checks owner authorization without requiring `@fetch` trigger.
+   * Checks owner authorization without requiring `@john` trigger.
    * 
    * @param senderId - WhatsApp chat ID
    * @param participantId - For groups, the actual sender's ID
@@ -184,11 +184,11 @@ export class SecurityGate {
       const chatType = isGroup ? 'group' : 'direct';
       const preview = messageBody.substring(0, 30).replace(/\n/g, ' ');
 
-      // Must have @fetch trigger
+      // Must have @john trigger
       if (!this.hasFetchTrigger(messageBody)) {
         // Only log if it looks like an attempted command (starts with @)
         if (messageBody.trim().startsWith('@')) {
-          logger.debug(`Ignored ${chatType} message (no @fetch): "${preview}..."`);
+          logger.debug(`Ignored ${chatType} message (no @john): "${preview}..."`);
         }
         return false;
       }
@@ -215,7 +215,7 @@ export class SecurityGate {
       }
 
       // Not owner and not in whitelist - DROP
-      logger.warn(`Blocked: @fetch from untrusted number (${chatType})`);
+      logger.warn(`Blocked: @john from untrusted number (${chatType})`);
       return false;
     } catch (error) {
       logger.error('Security gate error - denying access', error);

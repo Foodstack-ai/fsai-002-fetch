@@ -288,9 +288,9 @@ export class Bridge {
       this.isReady = true;
       this.readyAt = Date.now();
 
-      logger.section('🐕 Fetch is Ready!');
+      logger.section('📋 John is Ready!');
       logger.success('WhatsApp connected and listening for commands');
-      logger.info('Send a message starting with @fetch to interact');
+      logger.info('Send a message starting with @john to interact');
       logger.divider();
     });
 
@@ -443,9 +443,9 @@ export class Bridge {
 
       // Check if this is a reply to a Fetch message (thread continuation)
       const isReplyToFetch = message.fromMe ? false : await this.isReplyToFetchMessage(message);
-      const hasFetchTrigger = message.body.toLowerCase().trim().startsWith('@fetch');
+      const hasFetchTrigger = message.body.toLowerCase().trim().startsWith('@john');
 
-      // For messages from us (fromMe=true), ONLY process with explicit @fetch trigger.
+      // For messages from us (fromMe=true), ONLY process with explicit @john trigger.
       // Thread replies are disabled for fromMe to prevent infinite response loops.
       if (message.fromMe) {
         if (!hasFetchTrigger) {
@@ -453,7 +453,7 @@ export class Bridge {
         }
         logger.info('Processing self-chat message');
       } else {
-        // For messages from others, allow @fetch trigger OR reply to a Fetch message
+        // For messages from others, allow @john trigger OR reply to a Fetch message
         if (!hasFetchTrigger && !isReplyToFetch) {
           return;
         }
@@ -708,9 +708,9 @@ export class Bridge {
     const messageBody = message.body;
 
     // SECURITY GATE 1: Validate authorization
-    // For thread replies, we skip the @fetch trigger check but still verify identity
+    // For thread replies, we skip the @john trigger check but still verify identity
     if (isThreadReply) {
-      // For thread replies, verify owner OR trusted whitelist member (no @fetch required)
+      // For thread replies, verify owner OR trusted whitelist member (no @john required)
       const isGroup = senderId.endsWith('@g.us');
       const checkId = isGroup ? participantId : senderId;
       if (!checkId) return;
@@ -719,13 +719,13 @@ export class Bridge {
         return;
       }
     } else {
-      // Normal flow: require @fetch trigger + (owner OR trusted)
+      // Normal flow: require @john trigger + (owner OR trusted)
       if (!this.securityGate.isAuthorized(senderId, participantId, messageBody)) {
         return;
       }
     }
 
-    // Strip the @fetch trigger from the message (if present)
+    // Strip the @john trigger from the message (if present)
     const command = this.securityGate.stripTrigger(messageBody);
 
     // SECURITY GATE 2: Rate limiting

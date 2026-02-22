@@ -1273,20 +1273,20 @@ function generateFactualProgressMessage(userMessage: string, attempt: number = 1
   if (attempt === 1) {
     const initial = [
       `On it! I'm ${action}`,
-      `Working on it - ${action}! 🦴`,
-      `Let me handle that - ${action} now 🐾`,
-      `Woof! Just a sec while I'm ${action}`,
+      `Working on it - ${action}`,
+      `Let me handle that - ${action} now`,
+      `Just a moment while I'm ${action}`,
       `Got it, ${action}!`,
     ];
     return pick(initial);
   }
 
   const retries = [
-    `Still ${action}, almost there! 🐾`,
+    `Still ${action}, almost there!`,
     `One more moment - ${action}...`,
     `Hanging in there! Still ${action}`,
     `Making progress on this - ${action}`,
-    `Nearly done, just finishing up! 🦴`,
+    `Nearly done, just finishing up!`,
   ];
 
   return pick(retries);

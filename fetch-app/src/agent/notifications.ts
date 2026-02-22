@@ -115,7 +115,7 @@ const ERROR_TEMPLATES: Array<(data: FailedData) => string> = [
   (d) => `Couldn't quite crack it.\n\nError: ${d.error}\n\nWant me to take another run at it?`,
   (d) => `Got tripped up on this one.\n\nError: ${d.error}`,
   (d) => `The task didn't make it across the finish line.\n\nError: ${d.error}\n\nReady to retry whenever you are!`,
-  (d) => `Woof, that didn't go as planned.\n\nError: ${d.error}`,
+  (d) => `That didn't go as planned.\n\nError: ${d.error}`,
   (d) => `Hit a wall.\n\nError: ${d.error}\n\nHappy to dig deeper if you want!`,
 ];
 
