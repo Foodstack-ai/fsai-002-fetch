@@ -57,6 +57,14 @@ const DONNA_MESSAGES = [
   "Coordination ping: I'm available for any product strategy discussions. What's the team's current focus?",
 ];
 
+const CLAUDE_MESSAGES = [
+  "Hey Claude! 👋 John here. Any engineering tasks you need me to validate from a product perspective?",
+  "Claude, PM check-in. Let me know if you need user stories refined or priorities clarified.",
+  "Engineering sync: I'll be messaging James via WhatsApp. Anything from the codebase I should mention?",
+  "Claude! Working through heartbeat cycles. Any PRs or builds I should flag to James?",
+  "Quick PM→Eng sync: What's the current sprint velocity looking like? Any blockers?",
+];
+
 const CHANNEL_MESSAGES = [
   "📋 **John here** - Agent fleet heartbeat: Donna (orchestrator) and I (PM) are coordinating on sprint goals. Building FoodstackOS together! 🚀",
   "📋 **PM Update** - Running continuous BMAD cycles with the team. Donna's got the orchestration, I'm tracking product metrics.",
@@ -121,6 +129,19 @@ async function messageDonna(): Promise<void> {
 }
 
 /**
+ * Send a coordination message to Claude (Chief Engineer) via FoodstackOS.
+ */
+async function messageClaude(): Promise<void> {
+  try {
+    const message = getRandomMessage(CLAUDE_MESSAGES);
+    await sendAgentDM('claude', message);
+    logger.success('FoodstackOS DM sent to Claude');
+  } catch (error) {
+    logger.error('Failed to send FoodstackOS DM to Claude', error);
+  }
+}
+
+/**
  * Post a status update to #development channel.
  */
 async function postToDevChannel(): Promise<void> {
@@ -157,25 +178,27 @@ async function executeHeartbeat(): Promise<void> {
 
   switch (pattern) {
     case 1:
-      // Full sync: All channels
+      // Full sync: All channels + all agents
       await Promise.all([
         messageJamesWhatsApp(),
         messageJamesFoodstack(),
         messageDonna(),
+        messageClaude(),
         postToDevChannel(),
       ]);
       break;
 
     case 2:
-      // FoodstackOS focused
+      // FoodstackOS focused + Claude
       await Promise.all([
         messageJamesFoodstack(),
         messageDonna(),
+        messageClaude(),
       ]);
       break;
 
     case 3:
-      // WhatsApp + Donna coordination
+      // WhatsApp + Donna + Channel
       await Promise.all([
         messageJamesWhatsApp(),
         messageDonna(),
@@ -184,8 +207,11 @@ async function executeHeartbeat(): Promise<void> {
       break;
 
     case 0:
-      // Channel update only (less intrusive)
-      await postToDevChannel();
+      // Channel + Claude (engineering sync)
+      await Promise.all([
+        postToDevChannel(),
+        messageClaude(),
+      ]);
       break;
   }
 
